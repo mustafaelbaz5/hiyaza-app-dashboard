@@ -703,5 +703,12 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 
 ---
 
+## 17. Agent Working Rules
+
+- استخدم أي skill متاح (design, dataviz, artifact-design, clean-code-guard, ...) وقت التنفيذ من غير ما تستأذن الأول — لو الـ skill مناسب للمهمة.
+- استخدم أي subagent أو tool متاح (Supabase MCP, Explore agent, ...) عادي وقت الحاجة.
+
+---
+
 *آخر تحديث: أغسطس 2026*
 *الإصدار: 1.0*
