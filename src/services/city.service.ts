@@ -1,7 +1,7 @@
 import { supabase } from '../config/supabase';
 import type { BasinRow, CityMeta, ParcelRow } from '../types/excel';
 import type { Basin, City, CityStats, CitySummary } from '../types/city';
-import { ASSOCIATION_TYPE_MAP } from '../utils/excel-columns';
+import { resolveAssociationType } from '../utils/excel-columns';
 
 export async function getCities(): Promise<CitySummary[]> {
   const { data, error } = await supabase
@@ -73,7 +73,7 @@ export async function uploadCity(
 
   const normalizedParcels = parcels.map((parcel) => ({
     ...parcel,
-    association_type: ASSOCIATION_TYPE_MAP[parcel.association_type.trim()] ?? meta.association_type,
+    association_type: resolveAssociationType(parcel.association_type) || meta.association_type,
   }));
 
   const { data, error } = await supabase.rpc('insert_city_with_data', {

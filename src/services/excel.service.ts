@@ -1,11 +1,11 @@
 import * as XLSX from 'xlsx';
 import type { BasinRow, CityMeta, ExcelParseResult, ParcelRow } from '../types/excel';
 import {
-  ASSOCIATION_TYPE_MAP,
   BASIN_COLUMNS,
   BASINS_SHEET_NAME,
   PARCEL_COLUMNS,
   PARCELS_SHEET_NAME,
+  resolveAssociationType,
 } from '../utils/excel-columns';
 
 type ExcelRow = Record<string, unknown>;
@@ -116,9 +116,6 @@ function extractCityMeta(parcels: ParcelRow[]): CityMeta {
   };
 }
 
-function resolveAssociationType(value: string): 'agricultural_credit' | 'agricultural_reform' {
-  return ASSOCIATION_TYPE_MAP[value.trim()] ?? 'agricultural_credit';
-}
 
 function toText(value: unknown): string {
   if (value === null || value === undefined) return '';

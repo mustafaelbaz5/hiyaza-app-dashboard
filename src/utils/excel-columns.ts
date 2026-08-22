@@ -36,8 +36,26 @@ export const BASIN_COLUMNS = {
 
 export const ASSOCIATION_TYPE_MAP: Record<string, 'agricultural_credit' | 'agricultural_reform'> = {
   'الائتمان الزراعي': 'agricultural_credit',
-  ائتمان: 'agricultural_credit',
+  'ائتمان الزراعي': 'agricultural_credit',
+  'ائتمان': 'agricultural_credit',
   'الإصلاح الزراعي': 'agricultural_reform',
-  إصلاح: 'agricultural_reform',
-  اصلاح: 'agricultural_reform',
+  'إصلاح الزراعي': 'agricultural_reform',
+  'إصلاح': 'agricultural_reform',
+  'اصلاح': 'agricultural_reform',
 };
+
+export function resolveAssociationType(value: string): 'agricultural_credit' | 'agricultural_reform' {
+  if (!value) return 'agricultural_credit';
+
+  const normalized = value.trim().toLowerCase();
+
+  // Try exact match first
+  const mapped = ASSOCIATION_TYPE_MAP[value.trim()];
+  if (mapped) return mapped;
+
+  // Fallback: keyword matching for robustness
+  if (normalized.includes('ائتمان')) return 'agricultural_credit';
+  if (normalized.includes('اصلاح') || normalized.includes('إصلاح')) return 'agricultural_reform';
+
+  return 'agricultural_credit';
+}
