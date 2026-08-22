@@ -6,8 +6,12 @@ interface CityStatusBadgeProps {
 
 export function CityStatusBadge({ isPublished }: CityStatusBadgeProps) {
   return isPublished ? (
-    <Badge tone="green">● منشورة</Badge>
+    <Badge tone="green" dot>
+      منشورة
+    </Badge>
   ) : (
-    <Badge tone="gray">○ مسودة</Badge>
+    <Badge tone="gray" dot>
+      مسودة
+    </Badge>
   );
 }
