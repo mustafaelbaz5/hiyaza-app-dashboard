@@ -10,9 +10,9 @@ interface AlertProps {
 }
 
 const KIND_CLASSES: Record<Kind, string> = {
-  error: 'bg-red-50 text-red-700 border-red-200',
-  success: 'bg-brand-50 text-brand-800 border-brand-200',
-  info: 'bg-blue-50 text-blue-700 border-blue-200',
+  error: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+  success: 'bg-brand-50 text-brand-800 border-brand-200 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800',
+  info: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
 };
 
 const KIND_ICONS: Record<Kind, ReactNode> = {

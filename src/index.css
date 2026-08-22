@@ -4,6 +4,7 @@
 
 html {
   direction: rtl;
+  color-scheme: light dark;
 }
 
 body {
@@ -14,11 +15,36 @@ body {
   background: #f9fafb;
 }
 
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #e5e7eb;
+    background: #0f172a;
+  }
+}
+
+html.dark body {
+  color: #e5e7eb;
+  background: #0f172a;
+}
+
 ::selection {
   background: #bbf7d3;
+}
+
+@media (prefers-color-scheme: dark) {
+  ::selection {
+    background: #4ade87;
+    color: #fff;
+  }
 }
 
 * {
   scrollbar-width: thin;
   scrollbar-color: #d0d5dd transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  * {
+    scrollbar-color: #374151 transparent;
+  }
 }
