@@ -10,6 +10,30 @@ import {
 
 type ExcelRow = Record<string, unknown>;
 
+function findColumnValue(row: ExcelRow, expectedKey: string, allHeaders: string[]): unknown {
+  // First try exact match
+  if (row.hasOwnProperty(expectedKey)) {
+    return row[expectedKey];
+  }
+
+  // Try to find by similar string (handle whitespace/diacritical variations)
+  const candidates = allHeaders.filter(
+    (h) => h.trim().toLowerCase() === expectedKey.trim().toLowerCase()
+  );
+
+  if (candidates.length > 0) {
+    console.warn(
+      `[DEBUG] Column mismatch detected. Expected: "${expectedKey}", found: "${candidates[0]}"`
+    );
+    return row[candidates[0]];
+  }
+
+  console.warn(
+    `[DEBUG] Column not found: "${expectedKey}". Available: ${allHeaders.slice(0, 5).join(', ')}...`
+  );
+  return undefined;
+}
+
 export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
   const errors: string[] = [];
 
@@ -37,9 +61,13 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
     return { cityMeta: emptyCityMeta(), basins: [], parcels: [], errors };
   }
 
+  // Log actual column headers for debugging column name mismatches
+  const actualHeaders = parcelRows.length > 0 ? Object.keys(parcelRows[0]) : [];
+  console.log('[DEBUG] Actual parcel column headers:', actualHeaders);
+
   const parcels = parcelRows
     .filter(isRealParcelRow)
-    .map(parseParcelRow);
+    .map((row) => parseParcelRow(row, actualHeaders));
 
   const basins = basinRows.map(parseBasinRow);
 
@@ -64,30 +92,30 @@ function isRealParcelRow(row: ExcelRow): boolean {
   return holdingId !== '' || holderName !== '';
 }
 
-function parseParcelRow(row: ExcelRow): ParcelRow {
+function parseParcelRow(row: ExcelRow, allHeaders: string[]): ParcelRow {
   return {
-    directorate: toText(row[PARCEL_COLUMNS.directorate]),
-    administration: toText(row[PARCEL_COLUMNS.administration]),
-    association_name: toText(row[PARCEL_COLUMNS.association_name]),
-    association_code: toText(row[PARCEL_COLUMNS.association_code]),
-    association_type: toText(row[PARCEL_COLUMNS.association_type]),
-    basin_name: toText(row[PARCEL_COLUMNS.basin_name]),
-    basin_code: toText(row[PARCEL_COLUMNS.basin_code]),
-    holding_id_number: toText(row[PARCEL_COLUMNS.holding_id_number]),
-    unified_holding_id: toText(row[PARCEL_COLUMNS.unified_holding_id]),
-    registry_page: toText(row[PARCEL_COLUMNS.registry_page]),
-    national_id: toText(row[PARCEL_COLUMNS.national_id]),
-    holder_name: toText(row[PARCEL_COLUMNS.holder_name]),
-    parcel_count_in_holding: toNumber(row[PARCEL_COLUMNS.parcel_count_in_holding]),
-    land_number: toText(row[PARCEL_COLUMNS.land_number]),
-    area_feddan: toNumber(row[PARCEL_COLUMNS.area_feddan]),
-    area_qirat: toNumber(row[PARCEL_COLUMNS.area_qirat]),
-    area_sahm: toNumber(row[PARCEL_COLUMNS.area_sahm]),
-    area_sqm: toNumber(row[PARCEL_COLUMNS.area_sqm]),
-    border_north: toText(row[PARCEL_COLUMNS.border_north]),
-    border_south: toText(row[PARCEL_COLUMNS.border_south]),
-    border_east: toText(row[PARCEL_COLUMNS.border_east]),
-    border_west: toText(row[PARCEL_COLUMNS.border_west]),
+    directorate: toText(findColumnValue(row, PARCEL_COLUMNS.directorate, allHeaders)),
+    administration: toText(findColumnValue(row, PARCEL_COLUMNS.administration, allHeaders)),
+    association_name: toText(findColumnValue(row, PARCEL_COLUMNS.association_name, allHeaders)),
+    association_code: toText(findColumnValue(row, PARCEL_COLUMNS.association_code, allHeaders)),
+    association_type: toText(findColumnValue(row, PARCEL_COLUMNS.association_type, allHeaders)),
+    basin_name: toText(findColumnValue(row, PARCEL_COLUMNS.basin_name, allHeaders)),
+    basin_code: toText(findColumnValue(row, PARCEL_COLUMNS.basin_code, allHeaders)),
+    holding_id_number: toText(findColumnValue(row, PARCEL_COLUMNS.holding_id_number, allHeaders)),
+    unified_holding_id: toText(findColumnValue(row, PARCEL_COLUMNS.unified_holding_id, allHeaders)),
+    registry_page: toText(findColumnValue(row, PARCEL_COLUMNS.registry_page, allHeaders)),
+    national_id: toText(findColumnValue(row, PARCEL_COLUMNS.national_id, allHeaders)),
+    holder_name: toText(findColumnValue(row, PARCEL_COLUMNS.holder_name, allHeaders)),
+    parcel_count_in_holding: toNumber(findColumnValue(row, PARCEL_COLUMNS.parcel_count_in_holding, allHeaders)),
+    land_number: toText(findColumnValue(row, PARCEL_COLUMNS.land_number, allHeaders)),
+    area_feddan: toNumber(findColumnValue(row, PARCEL_COLUMNS.area_feddan, allHeaders)),
+    area_qirat: toNumber(findColumnValue(row, PARCEL_COLUMNS.area_qirat, allHeaders)),
+    area_sahm: toNumber(findColumnValue(row, PARCEL_COLUMNS.area_sahm, allHeaders)),
+    area_sqm: toNumber(findColumnValue(row, PARCEL_COLUMNS.area_sqm, allHeaders)),
+    border_north: toText(findColumnValue(row, PARCEL_COLUMNS.border_north, allHeaders)),
+    border_south: toText(findColumnValue(row, PARCEL_COLUMNS.border_south, allHeaders)),
+    border_east: toText(findColumnValue(row, PARCEL_COLUMNS.border_east, allHeaders)),
+    border_west: toText(findColumnValue(row, PARCEL_COLUMNS.border_west, allHeaders)),
   };
 }
 
@@ -123,6 +151,11 @@ function toText(value: unknown): string {
 }
 
 function toNumber(value: unknown): number {
+  if (value === null || value === undefined || value === '') return 0;
   const num = Number(value);
-  return Number.isFinite(num) ? num : 0;
+  if (!Number.isFinite(num)) {
+    console.warn('[DEBUG] Invalid number conversion:', { value, result: num });
+    return 0;
+  }
+  return num;
 }
