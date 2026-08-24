@@ -76,6 +76,15 @@ export async function uploadCity(
     association_type: resolveAssociationType(parcel.association_type) || meta.association_type,
   }));
 
+  console.log('[DEBUG] About to upload parcels. Sample:', {
+    totalParcels: normalizedParcels.length,
+    sample: normalizedParcels.slice(0, 2).map((p) => ({
+      holding_id: p.holding_id_number,
+      parcel_count_in_holding: p.parcel_count_in_holding,
+      area_sqm: p.area_sqm,
+    })),
+  });
+
   const { data, error } = await supabase.rpc('insert_city_with_data', {
     p_name: meta.name,
     p_association_type: meta.association_type,

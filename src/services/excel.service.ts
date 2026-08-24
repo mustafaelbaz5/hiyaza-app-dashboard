@@ -29,7 +29,7 @@ function findColumnValue(row: ExcelRow, expectedKey: string, allHeaders: string[
   }
 
   console.warn(
-    `[DEBUG] Column not found: "${expectedKey}". Available: ${allHeaders.slice(0, 5).join(', ')}...`
+    `[DEBUG] Column not found: "${expectedKey}". \nAvailable columns: ${JSON.stringify(allHeaders)}`
   );
   return undefined;
 }
@@ -63,7 +63,12 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
 
   // Log actual column headers for debugging column name mismatches
   const actualHeaders = parcelRows.length > 0 ? Object.keys(parcelRows[0]) : [];
-  console.log('[DEBUG] Actual parcel column headers:', actualHeaders);
+  console.log('%c=== EXCEL COLUMN HEADERS ===', 'color: red; font-size: 16px; font-weight: bold;');
+  console.log('Column names from your Excel file:');
+  actualHeaders.forEach((header, idx) => {
+    console.log(`  ${idx + 1}. "${header}"`);
+  });
+  console.log('%c=== END HEADERS ===', 'color: red; font-size: 16px; font-weight: bold;');
 
   const parcels = parcelRows
     .filter(isRealParcelRow)
@@ -93,6 +98,21 @@ function isRealParcelRow(row: ExcelRow): boolean {
 }
 
 function parseParcelRow(row: ExcelRow, allHeaders: string[]): ParcelRow {
+  const parcelCount = toNumber(findColumnValue(row, PARCEL_COLUMNS.parcel_count_in_holding, allHeaders));
+  const areaFeddan = toNumber(findColumnValue(row, PARCEL_COLUMNS.area_feddan, allHeaders));
+  const areaQirat = toNumber(findColumnValue(row, PARCEL_COLUMNS.area_qirat, allHeaders));
+  const areaSahm = toNumber(findColumnValue(row, PARCEL_COLUMNS.area_sahm, allHeaders));
+  const areaSqm = toNumber(findColumnValue(row, PARCEL_COLUMNS.area_sqm, allHeaders));
+
+  if (parcelCount !== 0 || areaFeddan !== 0 || areaSqm !== 0) {
+    console.log('[DEBUG] Parsed numeric values:', {
+      holding_id: toText(findColumnValue(row, PARCEL_COLUMNS.holding_id_number, allHeaders)),
+      parcel_count_in_holding: parcelCount,
+      area_feddan: areaFeddan,
+      area_sqm: areaSqm,
+    });
+  }
+
   return {
     directorate: toText(findColumnValue(row, PARCEL_COLUMNS.directorate, allHeaders)),
     administration: toText(findColumnValue(row, PARCEL_COLUMNS.administration, allHeaders)),
@@ -106,12 +126,12 @@ function parseParcelRow(row: ExcelRow, allHeaders: string[]): ParcelRow {
     registry_page: toText(findColumnValue(row, PARCEL_COLUMNS.registry_page, allHeaders)),
     national_id: toText(findColumnValue(row, PARCEL_COLUMNS.national_id, allHeaders)),
     holder_name: toText(findColumnValue(row, PARCEL_COLUMNS.holder_name, allHeaders)),
-    parcel_count_in_holding: toNumber(findColumnValue(row, PARCEL_COLUMNS.parcel_count_in_holding, allHeaders)),
+    parcel_count_in_holding: parcelCount,
     land_number: toText(findColumnValue(row, PARCEL_COLUMNS.land_number, allHeaders)),
-    area_feddan: toNumber(findColumnValue(row, PARCEL_COLUMNS.area_feddan, allHeaders)),
-    area_qirat: toNumber(findColumnValue(row, PARCEL_COLUMNS.area_qirat, allHeaders)),
-    area_sahm: toNumber(findColumnValue(row, PARCEL_COLUMNS.area_sahm, allHeaders)),
-    area_sqm: toNumber(findColumnValue(row, PARCEL_COLUMNS.area_sqm, allHeaders)),
+    area_feddan: areaFeddan,
+    area_qirat: areaQirat,
+    area_sahm: areaSahm,
+    area_sqm: areaSqm,
     border_north: toText(findColumnValue(row, PARCEL_COLUMNS.border_north, allHeaders)),
     border_south: toText(findColumnValue(row, PARCEL_COLUMNS.border_south, allHeaders)),
     border_east: toText(findColumnValue(row, PARCEL_COLUMNS.border_east, allHeaders)),
