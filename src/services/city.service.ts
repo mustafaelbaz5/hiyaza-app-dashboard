@@ -5,27 +5,27 @@ import { ASSOCIATION_TYPE_MAP } from "../utils/excel-columns";
 
 export async function getCities(): Promise<CitySummary[]> {
   const { data, error } = await supabase
-    .from("cities")
+    .from("city_summaries")
     .select(
-      "id,name,association_type,association_subtype,directorate,administration,data_version,is_published,created_at,updated_at,basins(count),parcels(count)",
+      "id,name,association_type,association_subtype,directorate,administration,data_version,is_published,created_at,updated_at,basins_count,parcels_count",
     )
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message || "فشل الاتصال بقاعدة البيانات");
 
   return (data ?? []).map((row) => {
-    const { basins, parcels, ...city } = row as unknown as City & {
-      basins: { count: number }[];
-      parcels: { count: number }[];
+    const city = row as unknown as City & {
+      basins_count: number | null;
+      parcels_count: number | null;
     };
+
     return {
       ...city,
-      basin_count: basins?.[0]?.count ?? 0,
-      parcel_count: parcels?.[0]?.count ?? 0,
+      basin_count: city.basins_count ?? 0,
+      parcel_count: city.parcels_count ?? 0,
     };
   });
 }
-
 export async function getCity(id: string): Promise<City> {
   const { data, error } = await supabase
     .from("cities")
@@ -41,7 +41,7 @@ export async function getCity(id: string): Promise<City> {
 export async function getCityBasins(cityId: string): Promise<Basin[]> {
   const { data, error } = await supabase
     .from("basins")
-    .select("*")
+    .select("id,city_id,basin_name,basin_code,total_feddan,total_qirat,total_sahm,total_sqm,parcel_count")
     .eq("city_id", cityId)
     .order("basin_name", { ascending: true });
 
@@ -50,34 +50,19 @@ export async function getCityBasins(cityId: string): Promise<Basin[]> {
 }
 
 export async function getCityStats(cityId: string): Promise<CityStats> {
-  const [
-    { count: basinCount, error: basinError },
-    { count: parcelCount, error: parcelError },
-  ] = await Promise.all([
-    supabase
-      .from("basins")
-      .select("*", { count: "exact", head: true })
-      .eq("city_id", cityId),
-    supabase
-      .from("parcels")
-      .select("*", { count: "exact", head: true })
-      .eq("city_id", cityId),
-  ]);
+  const { data, error } = await supabase
+    .from("city_summaries")
+    .select("basins_count,parcels_count")
+    .eq("id", cityId)
+    .single();
 
-  if (basinError || parcelError) {
-    throw new Error(
-      basinError?.message ||
-        parcelError?.message ||
-        "فشل الاتصال بقاعدة البيانات",
-    );
-  }
+  if (error) throw new Error(error.message || "فشل الاتصال بقاعدة البيانات");
 
   return {
-    basin_count: basinCount ?? 0,
-    parcel_count: parcelCount ?? 0,
+    basin_count: data?.basins_count ?? 0,
+    parcel_count: data?.parcels_count ?? 0,
   };
 }
-
 export async function uploadCity(
   meta: CityMeta,
   basins: BasinRow[],
@@ -126,3 +111,6 @@ export async function deleteCity(cityId: string): Promise<void> {
   const { error } = await supabase.rpc("delete_city", { p_city_id: cityId });
   if (error) throw new Error(error.message || "فشل حذف المدينة");
 }
+
+
+
