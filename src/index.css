@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 html {
   direction: rtl;
@@ -8,7 +6,7 @@ html {
 
 body {
   margin: 0;
-  font-family: 'IBM Plex Sans Arabic', Tahoma, system-ui, sans-serif;
+  font-family: "IBM Plex Sans Arabic", Tahoma, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   color: #101828;
   background: #f9fafb;

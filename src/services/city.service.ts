@@ -63,24 +63,14 @@ export async function getCityStats(cityId: string): Promise<CityStats> {
     parcel_count: data?.parcels_count ?? 0,
   };
 }
-export async function uploadCity(
-  meta: CityMeta,
-  basins: BasinRow[],
-  parcels: ParcelRow[],
-): Promise<string> {
-  const { data: existing } = await supabase
-    .from("cities")
-    .select("id")
-    .ilike("name", meta.name)
-    .maybeSingle();
+export async function uploadCity(meta: CityMeta, basins: BasinRow[], parcels: ParcelRow[]): Promise<string> {
+  const { data: existing } = await supabase.from("cities").select("id").ilike("name", meta.name).maybeSingle();
 
   if (existing) throw new Error("المدينة دي موجودة بالفعل");
 
   const normalizedParcels = parcels.map((parcel) => ({
     ...parcel,
-    association_type:
-      ASSOCIATION_TYPE_MAP[parcel.association_type.trim()] ??
-      meta.association_type,
+    association_type: ASSOCIATION_TYPE_MAP[parcel.association_type.trim()] ?? meta.association_type,
   }));
 
   const { data, error } = await supabase.rpc("insert_city_with_data", {
@@ -111,6 +101,3 @@ export async function deleteCity(cityId: string): Promise<void> {
   const { error } = await supabase.rpc("delete_city", { p_city_id: cityId });
   if (error) throw new Error(error.message || "فشل حذف المدينة");
 }
-
-
-

@@ -1,4 +1,4 @@
-export type AssociationType = 'agricultural_credit' | 'agricultural_reform';
+export type AssociationType = "agricultural_credit" | "agricultural_reform";
 
 export interface City {
   id: string;

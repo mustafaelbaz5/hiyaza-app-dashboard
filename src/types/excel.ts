@@ -7,7 +7,7 @@ export interface ExcelParseResult {
 
 export interface CityMeta {
   name: string;
-  association_type: 'agricultural_credit' | 'agricultural_reform';
+  association_type: "agricultural_credit" | "agricultural_reform";
   directorate: string;
   administration: string;
   association_code: string;

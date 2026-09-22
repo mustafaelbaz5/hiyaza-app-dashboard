@@ -1,12 +1,12 @@
-import * as XLSX from 'xlsx';
-import type { BasinRow, CityMeta, ExcelParseResult, ParcelRow } from '../types/excel';
+import * as XLSX from "xlsx";
+import type { BasinRow, CityMeta, ExcelParseResult, ParcelRow } from "../types/excel";
 import {
   ASSOCIATION_TYPE_MAP,
   BASIN_COLUMNS,
   BASINS_SHEET_NAME,
   PARCEL_COLUMNS,
   PARCELS_SHEET_NAME,
-} from '../utils/excel-columns';
+} from "../utils/excel-columns";
 
 type ExcelRow = Record<string, unknown>;
 
@@ -14,7 +14,7 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
   const errors: string[] = [];
 
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: 'array' });
+  const workbook = XLSX.read(buffer, { type: "array" });
 
   if (!workbook.SheetNames.includes(PARCELS_SHEET_NAME)) {
     errors.push(`مفيش شيت "${PARCELS_SHEET_NAME}"`);
@@ -29,17 +29,15 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
   const parcelsSheet = workbook.Sheets[PARCELS_SHEET_NAME];
   const basinsSheet = workbook.Sheets[BASINS_SHEET_NAME];
 
-  const parcelRows = XLSX.utils.sheet_to_json<ExcelRow>(parcelsSheet, { defval: '' });
-  const basinRows = XLSX.utils.sheet_to_json<ExcelRow>(basinsSheet, { defval: '' });
+  const parcelRows = XLSX.utils.sheet_to_json<ExcelRow>(parcelsSheet, { defval: "" });
+  const basinRows = XLSX.utils.sheet_to_json<ExcelRow>(basinsSheet, { defval: "" });
 
   if (parcelRows.length === 0) {
-    errors.push('الملف فاضي');
+    errors.push("الملف فاضي");
     return { cityMeta: emptyCityMeta(), basins: [], parcels: [], errors };
   }
 
-  const parcels = parcelRows
-    .filter(isRealParcelRow)
-    .map(parseParcelRow);
+  const parcels = parcelRows.filter(isRealParcelRow).map(parseParcelRow);
 
   const basins = basinRows.map(parseBasinRow);
 
@@ -50,18 +48,18 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
 
 function emptyCityMeta(): CityMeta {
   return {
-    name: '',
-    association_type: 'agricultural_credit',
-    directorate: '',
-    administration: '',
-    association_code: '',
+    name: "",
+    association_type: "agricultural_credit",
+    directorate: "",
+    administration: "",
+    association_code: "",
   };
 }
 
 function isRealParcelRow(row: ExcelRow): boolean {
-  const holdingId = String(row[PARCEL_COLUMNS.holding_id_number] ?? '').trim();
-  const holderName = String(row[PARCEL_COLUMNS.holder_name] ?? '').trim();
-  return holdingId !== '' || holderName !== '';
+  const holdingId = String(row[PARCEL_COLUMNS.holding_id_number] ?? "").trim();
+  const holderName = String(row[PARCEL_COLUMNS.holder_name] ?? "").trim();
+  return holdingId !== "" || holderName !== "";
 }
 
 function parseParcelRow(row: ExcelRow): ParcelRow {
@@ -116,12 +114,12 @@ function extractCityMeta(parcels: ParcelRow[]): CityMeta {
   };
 }
 
-function resolveAssociationType(value: string): 'agricultural_credit' | 'agricultural_reform' {
-  return ASSOCIATION_TYPE_MAP[value.trim()] ?? 'agricultural_credit';
+function resolveAssociationType(value: string): "agricultural_credit" | "agricultural_reform" {
+  return ASSOCIATION_TYPE_MAP[value.trim()] ?? "agricultural_credit";
 }
 
 function toText(value: unknown): string {
-  if (value === null || value === undefined) return '';
+  if (value === null || value === undefined) return "";
   return String(value).trim();
 }
 
