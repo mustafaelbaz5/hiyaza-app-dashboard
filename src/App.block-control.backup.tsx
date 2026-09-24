@@ -1,0 +1,341 @@
+import { FormEvent, useEffect, useState } from "react";
+import { supabase } from "./lib/supabase";
+
+type City = {
+  id: string;
+  name: string;
+  directorate: string | null;
+  administration: string | null;
+  is_published: boolean;
+  data_version: number;
+  association_type: string | null;
+  association_subtype: string | null;
+};
+const empty = {
+  name: "",
+  directorate: "",
+  administration: "",
+  association_type: "",
+  association_subtype: "",
+  is_published: false,
+};
+export default function App() {
+  const [session, setSession] = useState<any>(null),
+    [blocked, setBlocked] = useState(false),
+    [cities, setCities] = useState<City[]>([]),
+    [city, setCity] = useState<any>(null),
+    [form, setForm] = useState(empty),
+    [query, setQuery] = useState(""),
+    [tab, setTab] = useState("overview"),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const x = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => x.data.subscription.unsubscribe();
+  }, []);
+  useEffect(() => {
+    if (session) {
+      loadControl();
+      loadCities();
+    }
+  }, [session]);
+  const loadControl = async () => {
+    const { data, error: e } = await supabase.from("app_control").select("is_blocked").eq("id", "main").maybeSingle();
+    if (e) setError(e.message);
+    if (data) setBlocked(data.is_blocked);
+  };
+  const loadCities = async () => {
+    setBusy(true);
+    const { data, error: e } = await supabase.from("cities").select("*").order("name");
+    if (e) setError(e.message);
+    else setCities((data || []) as City[]);
+    setBusy(false);
+  };
+  const saveCity = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const payload = {
+      name: form.name.trim(),
+      directorate: form.directorate || null,
+      administration: form.administration || null,
+      association_type: form.association_type || null,
+      association_subtype: form.association_subtype || null,
+      is_published: form.is_published,
+    };
+    const result =
+      city ?
+        await supabase.from("cities").update(payload).eq("id", city.id).select().single()
+      : await supabase.from("cities").insert(payload).select().single();
+    if (result.error) setError(result.error.message);
+    else {
+      setNotice(city ? "تم تحديث المدينة" : "تمت إضافة المدينة");
+      setCity(null);
+      setForm(empty);
+      await loadCities();
+    }
+    setBusy(false);
+  };
+  const removeCity = async (id: string) => {
+    if (!confirm("سيتم حذف المدينة وبياناتها المرتبطة. هل تريد المتابعة؟")) return;
+    setBusy(true);
+    const { error: e } = await supabase.from("cities").delete().eq("id", id);
+    if (e) setError(e.message);
+    else {
+      setNotice("تم حذف المدينة");
+      await loadCities();
+    }
+    setBusy(false);
+  };
+  const toggleBlock = async () => {
+    const next = !blocked;
+    if (next && !confirm("سيتم إيقاف التطبيق لكل المستخدمين. هل تريد المتابعة؟")) return;
+    setBusy(true);
+    const { error: e } = await supabase
+      .from("app_control")
+      .update({ is_blocked: next, updated_at: new Date().toISOString() })
+      .eq("id", "main");
+    if (e) setError(e.message);
+    else setBlocked(next);
+    setBusy(false);
+  };
+  if (!session)
+    return (
+      <main className='login'>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            const { error: x } = await supabase.auth.signInWithPassword({
+              email: String(f.get("email")),
+              password: String(f.get("password")),
+            });
+            if (x) setError("بيانات الدخول غير صحيحة");
+          }}>
+          <b className='mark'>ه</b>
+          <h1>لوحة تحكم حيازة</h1>
+          <input
+            name='email'
+            type='email'
+            placeholder='البريد الإلكتروني'
+            required
+          />
+          <input
+            name='password'
+            type='password'
+            placeholder='كلمة المرور'
+            required
+          />
+          <button>دخول الإدارة</button>
+          <p>{error}</p>
+        </form>
+      </main>
+    );
+  const shown = cities.filter((x) =>
+    [x.name, x.directorate, x.administration].filter(Boolean).join(" ").toLowerCase().includes(query.toLowerCase()),
+  );
+  return (
+    <div className='shell'>
+      <aside>
+        <div className='brand'>
+          <b className='mark'>ه</b>
+          <span>
+            حيازة<small>لوحة التحكم</small>
+          </span>
+        </div>
+        <nav>
+          <button
+            className={tab === "overview" ? "nav-active" : ""}
+            onClick={() => setTab("overview")}>
+            نظرة عامة
+          </button>
+          <button
+            className={tab === "cities" ? "nav-active" : ""}
+            onClick={() => setTab("cities")}>
+            المدن والبيانات <b>{cities.length}</b>
+          </button>
+        </nav>
+        <button
+          className='ghost'
+          onClick={() => supabase.auth.signOut()}>
+          تسجيل الخروج
+        </button>
+      </aside>
+      <main className='main'>
+        <header>
+          <div>
+            <small>مركز التشغيل</small>
+            <h1>{tab === "cities" ? "المدن والبيانات" : "نظرة عامة"}</h1>
+          </div>
+          <button
+            className='ghost'
+            onClick={() => (tab === "cities" ? loadCities() : loadControl())}>
+            تحديث
+          </button>
+        </header>
+        {notice && <p className='notice'>{notice}</p>}
+        {error && <p className='error'>{error}</p>}
+        {tab === "overview" ?
+          <>
+            <section className='hero'>
+              <div>
+                <small>حالة المنظومة</small>
+                <h2>تحكم واضح وتشغيل آمن</h2>
+                <p>إدارة حالة تطبيق حيازة من مكان واحد.</p>
+              </div>
+              <strong className={blocked ? "danger" : "ok"}>{blocked ? "التطبيق محظور" : "التطبيق يعمل"}</strong>
+            </section>
+            <section className='card'>
+              <small>التحكم الرئيسي</small>
+              <h2>حظر التطبيق</h2>
+              <p>عند التفعيل تظهر شاشة حظر واحدة للمستخدمين.</p>
+              <button
+                className={blocked ? "danger-btn" : "primary"}
+                disabled={busy}
+                onClick={toggleBlock}>
+                {blocked ? "إلغاء الحظر" : "تفعيل الحظر"}
+              </button>
+            </section>
+          </>
+        : <>
+            <section className='toolbar'>
+              <div>
+                <h2>كل المدن</h2>
+                <small>{cities.length} مدينة في قاعدة البيانات</small>
+              </div>
+              <button
+                className='primary'
+                onClick={() => {
+                  setCity({});
+                  setForm(empty);
+                }}>
+                + إضافة مدينة
+              </button>
+            </section>
+            <input
+              className='search'
+              placeholder='ابحث باسم المدينة أو المديرية...'
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <section className='table-card'>
+              {busy ?
+                <p>جارِ التحميل...</p>
+              : shown.length === 0 ?
+                <p>لا توجد مدن مطابقة للبحث.</p>
+              : <table>
+                  <thead>
+                    <tr>
+                      <th>المدينة / الجمعية</th>
+                      <th>الموقع</th>
+                      <th>الإصدار</th>
+                      <th>الحالة</th>
+                      <th>إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shown.map((x) => (
+                      <tr key={x.id}>
+                        <td>
+                          <b>{x.name}</b>
+                          <small>{x.id}</small>
+                        </td>
+                        <td>{[x.directorate, x.administration].filter(Boolean).join(" — ") || "غير محدد"}</td>
+                        <td>{x.data_version}</td>
+                        <td>
+                          <span className={x.is_published ? "status on" : "status"}>
+                            {x.is_published ? "منشورة" : "مسودة"}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            className='link'
+                            onClick={() => {
+                              setCity(x);
+                              setForm({
+                                name: x.name,
+                                directorate: x.directorate || "",
+                                administration: x.administration || "",
+                                association_type: x.association_type || "",
+                                association_subtype: x.association_subtype || "",
+                                is_published: x.is_published,
+                              });
+                            }}>
+                            تعديل
+                          </button>
+                          <button
+                            className='link danger-text'
+                            onClick={() => removeCity(x.id)}>
+                            حذف
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              }
+            </section>
+          </>
+        }
+        {city && (
+          <div className='modal'>
+            <form
+              className='modal-card'
+              onSubmit={saveCity}>
+              <button
+                type='button'
+                className='close'
+                onClick={() => setCity(null)}>
+                ×
+              </button>
+              <h2>{city.id ? "تعديل المدينة" : "إضافة مدينة"}</h2>
+              <input
+                placeholder='اسم المدينة / الجمعية'
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+              />
+              <input
+                placeholder='المديرية'
+                value={form.directorate}
+                onChange={(e) => setForm({ ...form, directorate: e.target.value })}
+              />
+              <input
+                placeholder='الإدارة'
+                value={form.administration}
+                onChange={(e) => setForm({ ...form, administration: e.target.value })}
+              />
+              <select
+                value={form.association_type}
+                onChange={(e) => setForm({ ...form, association_type: e.target.value })}>
+                <option value=''>نوع الجمعية</option>
+                <option value='agricultural_credit'>الائتمان الزراعي</option>
+                <option value='agricultural_reform'>الإصلاح الزراعي</option>
+              </select>
+              <input
+                placeholder='التصنيف الفرعي'
+                value={form.association_subtype}
+                onChange={(e) => setForm({ ...form, association_subtype: e.target.value })}
+              />
+              <label className='check'>
+                <input
+                  type='checkbox'
+                  checked={form.is_published}
+                  onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
+                />{" "}
+                نشر المدينة للتطبيق
+              </label>
+              <button
+                className='primary'
+                disabled={busy}>
+                حفظ
+              </button>
+            </form>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

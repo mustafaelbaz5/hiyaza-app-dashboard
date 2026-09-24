@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  direction: rtl;
+}
+
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans Arabic", Tahoma, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: #101828;
+  background: #f9fafb;
+}
+
+::selection {
+  background: #bbf7d3;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d0d5dd transparent;
+}

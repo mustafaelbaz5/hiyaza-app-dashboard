@@ -4,7 +4,6 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { CitiesPage } from "./pages/CitiesPage";
 import { AddCityPage } from "./pages/AddCityPage";
 import { CityDetailPage } from "./pages/CityDetailPage";
-import { AppControlPage } from "./pages/AppControlPage";
 import { supabase } from "./config/supabase";
 function Login() {
   const [error, setError] = useState("");
@@ -72,10 +71,6 @@ export default function App() {
         <Route
           path='/cities/:id'
           element={<CityDetailPage />}
-        />
-        <Route
-          path='/control'
-          element={<AppControlPage />}
         />
       </Routes>
     </AppLayout>

@@ -1,0 +1,133 @@
+import { useEffect, useState } from "react";
+import { AlertTriangle, CheckCircle2, LockKeyhole, ShieldCheck, UnlockKeyhole } from "lucide-react";
+import { supabase } from "../config/supabase";
+type AppControl = { is_blocked: boolean; message_ar: string; message_en: string; updated_at: string };
+const fallback: AppControl = {
+  is_blocked: false,
+  message_ar: "التطبيق متوقف مؤقتًا.",
+  message_en: "The app is temporarily unavailable.",
+  updated_at: new Date().toISOString(),
+};
+export function AppControlPage() {
+  const [value, setValue] = useState(fallback);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const load = async () => {
+    setBusy(true);
+    const { data, error: e } = await supabase.from("app_control").select("*").eq("id", "main").maybeSingle();
+    if (e) setError(e.message);
+    if (data) setValue(data as AppControl);
+    setBusy(false);
+  };
+  useEffect(() => {
+    void load();
+  }, []);
+  const save = async (patch: Partial<AppControl>) => {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    const { data, error: e } = await supabase
+      .from("app_control")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("id", "main")
+      .select()
+      .single();
+    if (e) setError("تعذر الحفظ. تأكد من صلاحية الحساب الإداري.");
+    else {
+      setValue(data as AppControl);
+      setNotice("تم الحفظ بنجاح");
+    }
+    setBusy(false);
+  };
+  const toggle = () => {
+    const next = !value.is_blocked;
+    if (next && !window.confirm("سيتم إيقاف التطبيق لكل المستخدمين. هل تريد المتابعة؟")) return;
+    void save({ is_blocked: next });
+  };
+  return (
+    <div
+      className='p-6 md:p-8 max-w-5xl'
+      dir='rtl'>
+      <header className='mb-8'>
+        <h1 className='text-2xl font-bold text-gray-900'>حالة التطبيق</h1>
+        <p className='text-sm text-gray-500 mt-2'>تحكم مستقل في إتاحة التطبيق بدون التأثير على إدارة المدن.</p>
+      </header>
+      {notice && (
+        <div className='mb-5 flex items-center gap-2 rounded-xl bg-green-50 p-4 text-sm text-green-700'>
+          <CheckCircle2 size={18} />
+          {notice}
+        </div>
+      )}
+      {error && (
+        <div className='mb-5 flex items-center gap-2 rounded-xl bg-red-50 p-4 text-sm text-red-700'>
+          <AlertTriangle size={18} />
+          {error}
+        </div>
+      )}
+      <section className='rounded-2xl border border-gray-200 bg-white p-6 shadow-card'>
+        <div className='flex flex-col gap-6 md:flex-row md:items-center md:justify-between'>
+          <div className='flex items-start gap-4'>
+            <div
+              className={`rounded-2xl p-4 ${value.is_blocked ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}>
+              {value.is_blocked ?
+                <LockKeyhole size={30} />
+              : <ShieldCheck size={30} />}
+            </div>
+            <div>
+              <h2 className='text-xl font-semibold text-gray-900'>
+                {value.is_blocked ? "التطبيق متوقف" : "التطبيق يعمل"}
+              </h2>
+              <p className='mt-2 max-w-xl text-sm leading-6 text-gray-500'>
+                {value.is_blocked ?
+                  "سيظهر للمستخدمين الآن شاشة الحظر ولن يستطيعوا فتح أي شاشة أخرى."
+                : "التطبيق متاح للمستخدمين وتعمل كل الميزات بشكل طبيعي."}
+              </p>
+            </div>
+          </div>
+          <button
+            disabled={busy}
+            onClick={toggle}
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white ${value.is_blocked ? "bg-green-600" : "bg-red-600"} disabled:opacity-50`}>
+            {value.is_blocked ?
+              <UnlockKeyhole size={18} />
+            : <LockKeyhole size={18} />}{" "}
+            {value.is_blocked ? "فتح التطبيق" : "تفعيل الحظر"}
+          </button>
+        </div>
+        <div className='mt-6 border-t border-gray-100 pt-4 text-xs text-gray-400'>
+          آخر تحديث: {new Date(value.updated_at).toLocaleString("ar-EG")}
+        </div>
+      </section>
+      <section className='mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-card'>
+        <h2 className='text-lg font-semibold text-gray-900'>رسالة شاشة الحظر</h2>
+        <p className='mt-2 text-sm text-gray-500'>تظهر الرسالة حسب لغة التطبيق.</p>
+        <div className='mt-5 grid gap-4 md:grid-cols-2'>
+          <label className='text-sm font-medium text-gray-700'>
+            العربية
+            <textarea
+              className='mt-2 min-h-28 w-full rounded-xl border border-gray-200 p-3'
+              value={value.message_ar}
+              onChange={(e) => setValue({ ...value, message_ar: e.target.value })}
+            />
+          </label>
+          <label className='text-sm font-medium text-gray-700'>
+            English
+            <textarea
+              dir='ltr'
+              className='mt-2 min-h-28 w-full rounded-xl border border-gray-200 p-3'
+              value={value.message_en}
+              onChange={(e) => setValue({ ...value, message_en: e.target.value })}
+            />
+          </label>
+        </div>
+        <button
+          disabled={busy}
+          onClick={() => void save({ message_ar: value.message_ar, message_en: value.message_en })}
+          className='mt-4 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50'>
+          حفظ الرسائل
+        </button>
+      </section>
+    </div>
+  );
+}
